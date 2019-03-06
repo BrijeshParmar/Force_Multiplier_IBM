@@ -329,7 +329,7 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                         }
                         else{
                             showProgress(false);
-                            Intent redirect = new Intent(getApplicationContext(),SupportDashBoard.class);
+                            Intent redirect = new Intent(getApplicationContext(),SetTask.class);
                             redirect.putExtra("accessToken",res_code.getString("accessToken"));
                             startActivity(redirect);
                         }
