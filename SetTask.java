@@ -43,6 +43,7 @@ public class SetTask extends AppCompatActivity  {
     private Session supportSession;
     private String cust_long;
     private String cust_lat;
+    private String u_id;
 
     @Override
     protected void onStart() {
@@ -54,6 +55,7 @@ public class SetTask extends AppCompatActivity  {
         }
 
         accessToken = getIntent().getExtras().getString("accessToken");
+        u_id = getIntent().getExtras().getString("u_id");
         supportSession = new Session(getApplicationContext());
         supportSession.setuserToken(accessToken);
     }

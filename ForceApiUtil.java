@@ -3,7 +3,7 @@ package com.example.gb.forcemultiplier;
 import com.loopj.android.http.*;
 
 public class ForceApiUtil {
-        private static final String BASE_URL = "http://192.168.2.32:3000/api/";
+        private static final String BASE_URL = "https://forcemultiplierapi.eu-gb.mybluemix.net/api/";
 
         private static AsyncHttpClient client = new AsyncHttpClient();
 
@@ -22,6 +22,10 @@ public class ForceApiUtil {
 
         public static void post(String url, RequestParams params, AsyncHttpResponseHandler responseHandler) {
             client.post(getAbsoluteUrl(url), params, responseHandler);
+        }
+
+        public static void post(String url, AsyncHttpResponseHandler responseHandler) {
+            client.post(getAbsoluteUrl(url), responseHandler);
         }
 
         public static void getByUrl(String url, RequestParams params, AsyncHttpResponseHandler responseHandler) {

@@ -6,6 +6,10 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.net.ConnectivityManager;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -22,26 +26,19 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+
 import cz.msebera.android.httpclient.Header;
 
-public class FieldDashBoard extends AppCompatActivity {
-    private TextView taskStat;
-    private Button checkin;
+public class FieldDashBoard extends AppCompatActivity{
+
+    private SwipeRefreshLayout mylayout;
     private String accessToken;
     private Session fieldSession;
-    @Override
-    protected void onStart() {
-        if (isNetworkAvailable(getApplicationContext())) {
-            super.onStart();
-        } else {
-            Intent noint = new Intent(getApplicationContext(),NoInternet.class);
-            startActivity(noint);
-        }
-
-        accessToken = getIntent().getExtras().getString("accessToken");
-        fieldSession = new Session(getApplicationContext());
-        fieldSession.setuserToken(accessToken);
-    }
+    private String u_id;
+    public FragmentManager fragmentManager;
+    public FragmentTransaction fragmentTransaction;
+    private JSONArray taskqueue;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,19 +46,24 @@ public class FieldDashBoard extends AppCompatActivity {
         setContentView(R.layout.activity_field_dash_board);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
-        taskStat=(TextView)findViewById(R.id.taskStatus);
-        checkin =(Button)findViewById(R.id.checkInButton);
-        checkin.setOnClickListener(new View.OnClickListener() {
+        accessToken = getIntent().getExtras().getString("accessToken");
+        u_id = getIntent().getExtras().getString("u_id");
+        fieldSession = new Session(getApplicationContext());
+        fieldSession.clearSharedPreferences();
+        fieldSession.setuserToken(accessToken);
+
+
+        mylayout = (SwipeRefreshLayout)findViewById(R.id.swiperefresh1);
+
+        checkfornewtask();
+
+        mylayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
-            public void onClick(View v) {
-                if (isNetworkAvailable(getApplicationContext())) {
-                    checkIn();
-                } else {
-                    Intent noint = new Intent(getApplicationContext(),NoInternet.class);
-                    startActivity(noint);
-                }
+            public void onRefresh() {
+                checkfornewtask();
             }
         });
+
     }
 
 
@@ -79,53 +81,63 @@ public class FieldDashBoard extends AppCompatActivity {
                     }).create().show();
     }
 
+    private void checkfornewtask() {
+        //Toast.makeText(getApplicationContext(), "Screen Refresh", Toast.LENGTH_LONG).show();
 
-    public void checkIn(){
-        GPSTracker gpsTracker = new GPSTracker(this);
-
-        if (gpsTracker.getIsGPSTrackingEnabled())
-        {
-            String stringLatitude = String.valueOf(gpsTracker.latitude);
-            String stringLongitude = String.valueOf(gpsTracker.longitude);
-            String country = gpsTracker.getCountryName(this);
-            String city = gpsTracker.getLocality(this);
-            String postalCode = gpsTracker.getPostalCode(this);
-            String addressLine = gpsTracker.getAddressLine(this);
-            taskStat.setText(city);
-            upDateLocation(stringLatitude,stringLongitude);
-        }
-        else
-        {
-            // can't get location
-            // GPS or Network is not enabled
-            // Ask user to enable GPS/network in settings
-            gpsTracker.showSettingsAlert();
-        }
-    }
-
-    private void upDateLocation(String stringLatitude, String stringLongitude) {
         RequestParams rp = new RequestParams();
-        rp.add("latitude", stringLatitude);
-        rp.add("longitude", stringLongitude);
-        rp.add("status","Idle");
         ForceApiUtil.setHeader("Authorization",fieldSession.getuserToken());
-        ForceApiUtil.post("setfieldengdata", rp, new JsonHttpResponseHandler() {
+        ForceApiUtil.get("getfieldengdata", new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
                 // If the response is JSONObject instead of expected JSONArray
                 Log.d("rest","Calling restapi checkin");
                 try {
                     JSONObject serverResp = new JSONObject(response.toString());
-                    int result = serverResp.getInt("statusCode");
-                    if(result==200){
-                        Toast.makeText(getApplicationContext(),"Your Location has been recorded",Toast.LENGTH_LONG).show();
+                    taskqueue = (JSONArray)serverResp.getJSONObject("results").get("taskQueue");
+                    if(taskqueue.length()==0){
+                        Fragment notask = new NoTaskFragment();
+                        if(!notask.isVisible()) {
+                            FragmentManager manager = getSupportFragmentManager();
+                            FragmentTransaction fragmentTransaction = manager.beginTransaction();
+                            fragmentTransaction.replace(R.id.fragment_container, notask);
+                            //fragmentTransaction.addToBackStack(null);
+                            fragmentTransaction.commit();
+                        }
                     }
                     else{
-                        Toast.makeText(getApplicationContext(),"Unable to Set Location",Toast.LENGTH_LONG).show();
+                        Fragment btask = new busyFragment();
+                        if(!btask.isVisible()) {
+                            Bundle beng = new Bundle();
+                            ArrayList<taskQueue> taskList = new ArrayList<taskQueue>();
+                            for(int i=0; i<taskqueue.length(); i++){
+                                try{
+                                    JSONObject json_data = taskqueue.getJSONObject(i);
+                                    String cName = json_data.getString("custName");
+                                    String issue = json_data.getString("description");
+                                    String lat = json_data.getString("latitude");
+                                    String lon = json_data.getString("longitude");
+                                    String rtime = json_data.getString("reqTime");
+                                    taskList.add(new taskQueue(cName,issue,lat,lon,rtime));
+                                }
+                                catch (Exception e) {
+                                    //Toast.makeText(getApplicationContext(), "Object is Null", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                            taskQueue task = taskList.get(0);
+                            String[] arr = {task.getCustomerName(),task.getIssue(),task.getLatitude(),task.getLongitude(),task.getReq_time()};
+                            beng.putStringArray("task",arr);
+                            beng.putInt("tcount",taskqueue.length());
+                            btask.setArguments(beng);
+                            FragmentManager manager = getSupportFragmentManager();
+                            FragmentTransaction fragmentTransaction = manager.beginTransaction();
+                            fragmentTransaction.replace(R.id.fragment_container, btask);
+                            //fragmentTransaction.addToBackStack(null);
+                            fragmentTransaction.commit();
+                        }
                     }
 
                 } catch (JSONException e) {
-                    Toast.makeText(getApplicationContext(), "Unable to write location", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), "Unable to Access Server Api", Toast.LENGTH_LONG).show();
                     // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
@@ -149,11 +161,8 @@ public class FieldDashBoard extends AppCompatActivity {
 
             }
         });
-    }
 
-    public boolean isNetworkAvailable(final Context context) {
-        final ConnectivityManager connectivityManager = ((ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE));
-        return connectivityManager.getActiveNetworkInfo() != null && connectivityManager.getActiveNetworkInfo().isConnected();
+        mylayout.setRefreshing(false);
     }
 }
 

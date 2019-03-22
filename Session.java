@@ -20,4 +20,8 @@ public class Session {
         String userToken = prefs.getString("accessToken","");
         return userToken;
     }
+
+    public void clearSharedPreferences(){
+        prefs.edit().clear();
+    }
 }

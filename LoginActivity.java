@@ -213,6 +213,12 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         return email.contains("@");
     }
 
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        mEmailView.getText().clear();
+        mPasswordView.getText().clear();
+    }
 
     /**
      * Shows the progress UI and hides the login form.
@@ -325,23 +331,21 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
                             showProgress(false);
                             Intent redirect = new Intent(getApplicationContext(),FieldDashBoard.class);
                             redirect.putExtra("accessToken",res_code.getString("accessToken"));
+                            redirect.putExtra("u_id",res_code.getString("f_id"));
                             startActivity(redirect);
                         }
                         else{
                             showProgress(false);
                             Intent redirect = new Intent(getApplicationContext(),SetTask.class);
                             redirect.putExtra("accessToken",res_code.getString("accessToken"));
+                            redirect.putExtra("u_id",res_code.getString("s_id"));
                             startActivity(redirect);
                         }
-                    }
-                    if(result==401){
-                        showProgress(false);
-                        Toast.makeText(getApplicationContext(), "Invalid-email Password", Toast.LENGTH_LONG).show();
                     }
 
                 } catch (JSONException e) {
 
-                    Toast.makeText(getApplicationContext(), "Invalid E-mail or Password", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), "You are not a valid user", Toast.LENGTH_LONG).show();
                     // TODO Auto-generated catch block
                     System.out.println("Error Reading Json");
                     e.printStackTrace();
@@ -352,11 +356,14 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
                 try {
                     int result = errorResponse.getInt("statusCode");
+                    if(result==404){
+                        showProgress(false);
+                        Toast.makeText(getApplicationContext(), "Invalid-email Password", Toast.LENGTH_LONG).show();
+                    }
                     if(result==401){
                         showProgress(false);
                         mPasswordView.setError(getString(R.string.error_incorrect_password));
                         mPasswordView.requestFocus();
-                        Toast.makeText(getApplicationContext(), "Invalid-email Password", Toast.LENGTH_LONG).show();
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
