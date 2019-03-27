@@ -1,11 +1,8 @@
 package com.example.gb.forcemultiplier;
 
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.net.ConnectivityManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentTransaction;
@@ -13,12 +10,9 @@ import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import com.loopj.android.http.AsyncHttpClient;
+import com.google.firebase.messaging.FirebaseMessagingService;
 import com.loopj.android.http.JsonHttpResponseHandler;
 import com.loopj.android.http.RequestParams;
 
@@ -30,7 +24,7 @@ import java.util.ArrayList;
 
 import cz.msebera.android.httpclient.Header;
 
-public class FieldDashBoard extends AppCompatActivity{
+public class FieldDashBoard extends AppCompatActivity {
 
     private SwipeRefreshLayout mylayout;
     private String accessToken;
@@ -66,12 +60,18 @@ public class FieldDashBoard extends AppCompatActivity{
 
     }
 
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+
+        checkfornewtask();
+    }
 
     @Override
     public void onBackPressed() {
             new AlertDialog.Builder(this)
                     .setTitle("Really Exit?")
-                    .setMessage("Are you sure you want to LogOut?")
+                    .setMessage("Are you sure you want to Logout?")
                     .setNegativeButton(android.R.string.no, null)
                     .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
 
@@ -112,27 +112,39 @@ public class FieldDashBoard extends AppCompatActivity{
                             for(int i=0; i<taskqueue.length(); i++){
                                 try{
                                     JSONObject json_data = taskqueue.getJSONObject(i);
+                                    String taskId = json_data.getString("_id");
                                     String cName = json_data.getString("custName");
                                     String issue = json_data.getString("description");
                                     String lat = json_data.getString("latitude");
                                     String lon = json_data.getString("longitude");
                                     String rtime = json_data.getString("reqTime");
-                                    taskList.add(new taskQueue(cName,issue,lat,lon,rtime));
+                                    taskList.add(new taskQueue(cName,issue,lat,lon,rtime, taskId));
                                 }
                                 catch (Exception e) {
                                     //Toast.makeText(getApplicationContext(), "Object is Null", Toast.LENGTH_SHORT).show();
                                 }
                             }
-                            taskQueue task = taskList.get(0);
-                            String[] arr = {task.getCustomerName(),task.getIssue(),task.getLatitude(),task.getLongitude(),task.getReq_time()};
-                            beng.putStringArray("task",arr);
-                            beng.putInt("tcount",taskqueue.length());
-                            btask.setArguments(beng);
-                            FragmentManager manager = getSupportFragmentManager();
-                            FragmentTransaction fragmentTransaction = manager.beginTransaction();
-                            fragmentTransaction.replace(R.id.fragment_container, btask);
-                            //fragmentTransaction.addToBackStack(null);
-                            fragmentTransaction.commit();
+                            try {
+                                taskQueue task = taskList.get(0);
+                                String[] arr = {task.getCustomerName(),task.getIssue(),task.getLatitude(),task.getLongitude(),task.getReq_time(),task.getTid()};
+                                beng.putStringArray("task",arr);
+                                beng.putInt("tcount",taskqueue.length());
+                                btask.setArguments(beng);
+                                FragmentManager manager = getSupportFragmentManager();
+                                FragmentTransaction fragmentTransaction = manager.beginTransaction();
+                                fragmentTransaction.replace(R.id.fragment_container, btask);
+                                //fragmentTransaction.addToBackStack(null);
+                                fragmentTransaction.commit();
+                            }
+                            catch (Exception e){
+                                Fragment notask = new NoTaskFragment();
+                                FragmentManager manager = getSupportFragmentManager();
+                                FragmentTransaction fragmentTransaction = manager.beginTransaction();
+                                fragmentTransaction.replace(R.id.fragment_container, notask);
+                                //fragmentTransaction.addToBackStack(null);
+                                fragmentTransaction.commit();
+                            }
+
                         }
                     }
 

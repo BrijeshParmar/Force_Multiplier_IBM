@@ -6,6 +6,9 @@ public class taskQueue {
     private String longitude;
     private String latitude;
     private String issue;
+    private String tid;
+
+    public String getTid() { return tid;}
 
     public String getCustomerName() {
         return customerName;
@@ -27,11 +30,12 @@ public class taskQueue {
         return issue;
     }
 
-    public  taskQueue(String cName,String description, String lon,String lat,String t){
+    public  taskQueue(String cName, String description, String lon, String lat, String t, String tid){
         this.customerName =cName;
         this.issue = description;
         this.latitude = lat;
         this.longitude = lon;
         this.req_time = t;
+        this.tid = tid;
     }
 }

@@ -3,6 +3,8 @@ package com.example.gb.forcemultiplier;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -40,6 +42,11 @@ import java.util.List;
 
 import static android.Manifest.permission.READ_CONTACTS;
 import org.json.*;
+
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.iid.FirebaseInstanceId;
+import com.google.firebase.iid.InstanceIdResult;
 import com.loopj.android.http.*;
 import cz.msebera.android.httpclient.Header;
 /**
@@ -69,6 +76,11 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
     private EditText mPasswordView;
     private View mProgressView;
     private View mLoginFormView;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -316,6 +328,18 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         rp.add("password", Password);
         Log.d("rest","Calling restapi login");
 
+        FirebaseInstanceId.getInstance().getInstanceId()
+                .addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<InstanceIdResult> task) {
+                        if (!task.isSuccessful()) {
+                            return;
+                        }
+                    }
+                });
+
+        rp.add("deviceId",new MyFirebaseMessagingService().sendCode());
+
         ForceApiUtil.post("login", rp, new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
@@ -377,6 +401,9 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
             }
         });
     }
+
+
+
     /**
      * Represents an asynchronous login/registration task used to authenticate
      * the user.
@@ -439,5 +466,8 @@ public class LoginActivity extends AppCompatActivity implements LoaderCallbacks<
         final ConnectivityManager connectivityManager = ((ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE));
         return connectivityManager.getActiveNetworkInfo() != null && connectivityManager.getActiveNetworkInfo().isConnected();
     }
+
+
+
 }
 

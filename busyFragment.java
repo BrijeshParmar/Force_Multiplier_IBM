@@ -3,9 +3,12 @@ package com.example.gb.forcemultiplier;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -23,6 +26,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+
 import cz.msebera.android.httpclient.Header;
 
 public class busyFragment extends Fragment {
@@ -37,6 +42,7 @@ public class busyFragment extends Fragment {
     private TextView rtime;
     private Button gotomap;
     private Button tDone;
+    private String taskId;
     public double latitude_location;
     public double longitude_location;
 
@@ -75,7 +81,7 @@ public class busyFragment extends Fragment {
         custName.setText(taskInfo[0]);
         issuedesc.setText(taskInfo[1]);
         rtime.setText(taskInfo[4]);
-
+        taskId = taskInfo[5];
         checkin = (Button)getView().findViewById(R.id.checkInButton_b);
         checkin.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -89,6 +95,47 @@ public class busyFragment extends Fragment {
             }
         });
 
+        gotomap.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String geoUri = "http://maps.google.com/maps?q=loc:" + taskInfo[3] + "," + taskInfo[2] + " (" + taskInfo[0] + ")";
+                Intent gointent = new Intent(android.content.Intent.ACTION_VIEW,
+                        Uri.parse(geoUri));
+                startActivity(gointent);
+            }
+        });
+
+        tDone.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                removeTask(taskId);
+            }
+        });
+
+    }
+
+    private void removeTask(String taskId) {
+        ForceApiUtil.setHeader("Authorization",fieldSession.getuserToken());
+        ForceApiUtil.get("check-out/"+taskId, new JsonHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                // If the response is JSONObject instead of expected JSONArray
+                Log.d("rest","Calling restapi task check out");
+                Intent gotodone = new Intent(getContext(),fieldTaskDone.class);
+                startActivity(gotodone);
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+
+            }
+
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONArray timeline) {
+                // Pull out the first event on the public timeline
+
+            }
+        });
 
     }
 
